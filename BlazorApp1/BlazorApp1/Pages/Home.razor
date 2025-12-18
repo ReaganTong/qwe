@@ -1,0 +1,46 @@
+﻿@page "/"
+@using AdminPanel.Models
+@inject Supabase.Client Supabase
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<MudContainer Class="mt-8">
+    <MudText Typo="Typo.h3" Class="mb-4">Admin Dashboard</MudText>
+
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Style="height: 150px;">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h4">@Reports.Count</MudText>
+                <MudText Typo="Typo.subtitle1">Total Reports</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Style="height: 150px;">
+                <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Warning" Size="Size.Large" />
+                <MudText Typo="Typo.h4">@Reports.Count(r => r.Status == "Pending")</MudText>
+                <MudText Typo="Typo.subtitle1">Pending Action</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Style="height: 150px;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                <MudText Typo="Typo.h4">@Reports.Count(r => r.Status == "Resolved")</MudText>
+                <MudText Typo="Typo.subtitle1">Resolved</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private List<ReportModel> Reports = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // FETCH REAL DATA
+        var response = await Supabase.From<ReportModel>().Get();
+        Reports = response.Models;
+    }
+}

@@ -1,0 +1,54 @@
+﻿@page "/post-news"
+@using AdminPanel.Models
+@inject Supabase.Client Supabase
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-4">📢 Post Campus News</MudText>
+
+        <MudForm @ref="form">
+            <MudTextField @bind-Value="title" Label="Title" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+            <MudTextField @bind-Value="description" Label="Description" Lines="4" Variant="Variant.Outlined" Class="mb-4" Required="true" />
+
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="SubmitNews" 
+                       FullWidth="true"
+                       Disabled="@isSubmitting">
+                @(isSubmitting ? "Publishing..." : "Publish News")
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string title;
+    private string description;
+    private bool isSubmitting;
+    MudForm form;
+
+    private async Task SubmitNews()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        isSubmitting = true;
+
+        var newNews = new NewsModel
+        {
+            Title = title,
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await Supabase.From<NewsModel>().Insert(newNews);
+        
+        Snackbar.Add("News Posted Successfully!", Severity.Success);
+        
+        // Reset form
+        title = string.Empty;
+        description = string.Empty;
+        isSubmitting = false;
+    }
+}

@@ -1,0 +1,71 @@
+﻿@page "/reports"
+@using AdminPanel.Models
+@inject Supabase.Client Supabase
+@inject ISnackbar Snackbar
+
+<MudContainer Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-4">Incident Reports</MudText>
+
+    <MudTable Items="@reportList" Hover="true" Loading="@isLoading">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Location</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.CreatedAt.ToString("g")</MudTd>
+            <MudTd>@context.Description</MudTd>
+            <MudTd>
+                <MudLink Href="@($"https://www.google.com/maps/search/?api=1&query={context.Location}")" Target="_blank">
+                    @context.Location
+                </MudLink>
+            </MudTd>
+            <MudTd>
+                <MudChip Color="@(context.Status == "Resolved" ? Color.Success : Color.Warning)">
+                    @context.Status
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                @if (context.Status != "Resolved")
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Success" 
+                               Size="Size.Small"
+                               OnClick="@(() => MarkResolved(context))">
+                        Resolve
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<ReportModel> reportList = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        var response = await Supabase.From<ReportModel>()
+            .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Get();
+        reportList = response.Models;
+        isLoading = false;
+    }
+
+    private async Task MarkResolved(ReportModel report)
+    {
+        report.Status = "Resolved";
+        await Supabase.From<ReportModel>().Update(report);
+        Snackbar.Add("Report marked as resolved!", Severity.Success);
+        await LoadData(); // Refresh list
+    }
+}

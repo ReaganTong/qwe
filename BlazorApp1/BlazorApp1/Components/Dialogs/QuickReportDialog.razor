@@ -1,0 +1,80 @@
+@using MudBlazor
+@using CampusSafety.Admin.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Report New Incident</MudText>
+        
+        <MudForm @ref="reportForm" Model="@incident" @onsubmit="HandleSubmit">
+            <MudTextField @bind-Value="incident.Title"
+                         Label="Title *"
+                         Variant="Variant.Outlined"
+                         Required="true"
+                         Class="mb-3" />
+            
+            <MudGrid Spacing="3" Class="mb-3">
+                <MudItem xs="6">
+                    <MudSelect @bind-Value="incident.Category"
+                              Label="Category"
+                              Variant="Variant.Outlined">
+                        <MudSelectItem Value="hazard">Hazard</MudSelectItem>
+                        <MudSelectItem Value="security">Security</MudSelectItem>
+                        <MudSelectItem Value="maintenance">Maintenance</MudSelectItem>
+                        <MudSelectItem Value="other">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect @bind-Value="incident.Severity"
+                              Label="Severity"
+                              Variant="Variant.Outlined">
+                        <MudSelectItem Value="low">Low</MudSelectItem>
+                        <MudSelectItem Value="medium">Medium</MudSelectItem>
+                        <MudSelectItem Value="high">High</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+            
+            <MudTextField @bind-Value="incident.Description"
+                         Label="Description"
+                         Variant="Variant.Outlined"
+                         Lines="3"
+                         Class="mb-3" />
+            
+            <MudTextField @bind-Value="incident.Location"
+                         Label="Location"
+                         Variant="Variant.Outlined"
+                         Class="mb-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Submit Report</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    
+    private MudForm reportForm;
+    private Incident incident = new();
+    
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+    
+    private async Task Submit()
+    {
+        await reportForm.Validate();
+        
+        if (reportForm.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(incident));
+        }
+    }
+    
+    private async Task HandleSubmit()
+    {
+        await Submit();
+    }
+}

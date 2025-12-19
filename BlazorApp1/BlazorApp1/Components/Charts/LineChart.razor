@@ -1,0 +1,54 @@
+@using ChartJs.Blazor
+@using ChartJs.Blazor.Common
+@using ChartJs.Blazor.Common.Enums
+@using ChartJs.Blazor.LineChart
+@using ChartJs.Blazor.Util
+
+<div style="position: relative; height: @Height; width: @Width;">
+    <ChartJsLineChart @ref="chart" Config="_config" />
+</div>
+
+@code {
+    private ChartJsLineChart chart;
+    private LineConfig _config = new();
+    
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public LineConfig Config { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Config != null)
+        {
+            _config = Config;
+        }
+        else if (chart != null)
+        {
+            await chart.Update();
+        }
+    }
+
+    public async Task UpdateConfig(LineConfig newConfig)
+    {
+        _config = newConfig;
+        if (chart != null)
+        {
+            await chart.SetConfigAsync(_config);
+            await chart.Update();
+        }
+    }
+
+    public async Task UpdateData(List<double> data, List<string> labels = null)
+    {
+        if (_config.Data?.Datasets?.FirstOrDefault() is LineDataset<double> dataset)
+        {
+            dataset.Data = data;
+            if (labels != null && _config.Data != null)
+            {
+                _config.Data.Labels = labels;
+            }
+            await chart.Update();
+        }
+    }
+}

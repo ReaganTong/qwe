@@ -1,0 +1,246 @@
+﻿@page "/analytics"
+@using ChartJs.Blazor
+@using ChartJs.Blazor.Common
+@using ChartJs.Blazor.Common.Enums
+@using ChartJs.Blazor.LineChart
+@using ChartJs.Blazor.PieChart
+@using ChartJs.Blazor.BarChart
+@inject ChartService ChartService
+
+<PageTitle>Analytics - Campus Safety Admin</PageTitle>
+
+<!-- Header -->
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12">
+        <div class="d-flex justify-space-between align-center">
+            <div>
+                <MudText Typo="Typo.h4">Analytics Dashboard</MudText>
+                <MudText Typo="Typo.body2" Color="Color.TextSecondary">
+                    Detailed insights and performance metrics
+                </MudText>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <MudSelect @bind-Value="SelectedDateRange" Label="Date Range" Variant="Variant.Outlined">
+                    <MudSelectItem Value="week">This Week</MudSelectItem>
+                    <MudSelectItem Value="month">This Month</MudSelectItem>
+                    <MudSelectItem Value="quarter">This Quarter</MudSelectItem>
+                    <MudSelectItem Value="year">This Year</MudSelectItem>
+                </MudSelect>
+                
+                <MudButton Variant="Variant.Outlined" 
+                          StartIcon="@Icons.Material.Filled.Download"
+                          OnClick="ExportReport">
+                    Export
+                </MudButton>
+            </div>
+        </div>
+    </MudItem>
+</MudGrid>
+
+<!-- KPI Cards -->
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-3" Elevation="1">
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <MudText Typo="Typo.body2">Response Time</MudText>
+                    <MudChip Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" />
+                        +12%
+                    </MudChip>
+                </div>
+                <MudText Typo="Typo.h4">2.4 <small class="text-muted">hours avg</small></MudText>
+                <div style="height: 50px; width: 100%;">
+                    <ChartJsLineChart @ref="ResponseTimeChart" />
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    
+    <!-- More KPI cards... -->
+</MudGrid>
+
+<!-- Main Charts -->
+<MudGrid Spacing="3">
+    <!-- Incident Trend Chart -->
+    <MudItem xs="12" lg="8">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h6">Incident Trends Over Time</MudText>
+                <MudSelect @bind-Value="TrendMetric" 
+                          T="string" 
+                          Variant="Variant.Outlined"
+                          Style="width: 200px;">
+                    <MudSelectItem Value="count">Incident Count</MudSelectItem>
+                    <MudSelectItem Value="severity">Average Severity</MudSelectItem>
+                    <MudSelectItem Value="response">Response Time</MudSelectItem>
+                </MudSelect>
+            </div>
+            
+            <ChartJsLineChart @ref="IncidentTrendChart" Width="800" Height="300" />
+        </MudPaper>
+    </MudItem>
+    
+    <!-- Category Distribution -->
+    <MudItem xs="12" lg="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Category Distribution</MudText>
+            <ChartJsPieChart @ref="CategoryChart" Width="400" Height="300" />
+        </MudPaper>
+    </MudItem>
+    
+    <!-- Time of Day Analysis -->
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Peak Reporting Times</MudText>
+            <ChartJsBarChart @ref="TimeOfDayChart" Width="400" Height="300" />
+        </MudPaper>
+    </MudItem>
+    
+    <!-- Department Comparison -->
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">By Department</MudText>
+            <ChartJsBarChart @ref="DepartmentChart" Width="400" Height="300" />
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- Report Generator Dialog -->
+<MudDialog @bind-IsVisible="ShowReportDialog">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Generate Custom Report</MudText>
+        
+        <MudTextField @bind-Value="ReportName" 
+                     Label="Report Name" 
+                     Class="mb-3"
+                     Required="true" />
+        
+        <MudGrid Spacing="3">
+            <MudItem xs="6">
+                <MudSelect @bind-Value="ReportPeriod" Label="Period">
+                    <MudSelectItem Value="week">Last Week</MudSelectItem>
+                    <MudSelectItem Value="month">Last Month</MudSelectItem>
+                    <MudSelectItem Value="quarter">Last Quarter</MudSelectItem>
+                    <MudSelectItem Value="year">Last Year</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6">
+                <MudSelect @bind-Value="ReportFormat" Label="Format">
+                    <MudSelectItem Value="pdf">PDF</MudSelectItem>
+                    <MudSelectItem Value="excel">Excel</MudSelectItem>
+                    <MudSelectItem Value="html">HTML</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Sections to Include</MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="6">
+                <MudCheckBox @bind-Checked="IncludeTrends" Label="Incident Trends" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudCheckBox @bind-Checked="IncludeCategories" Label="Category Analysis" />
+            </MudItem>
+            <!-- More checkboxes... -->
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseReportDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="GenerateReport">Generate</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // Chart references
+    private ChartJsLineChart IncidentTrendChart;
+    private ChartJsPieChart CategoryChart;
+    private ChartJsBarChart TimeOfDayChart;
+    private ChartJsBarChart DepartmentChart;
+    private ChartJsLineChart ResponseTimeChart;
+    
+    // State
+    private string SelectedDateRange = "month";
+    private string TrendMetric = "count";
+    private bool ShowReportDialog = false;
+    private string ReportName = "";
+    private string ReportPeriod = "month";
+    private string ReportFormat = "pdf";
+    private bool IncludeTrends = true;
+    private bool IncludeCategories = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAnalyticsData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeCharts();
+        }
+    }
+
+    private async Task LoadAnalyticsData()
+    {
+        // Load data from services
+        await Task.Delay(100); // Simulate API call
+    }
+
+    private async Task InitializeCharts()
+    {
+        // Incident Trend Chart
+        var trendConfig = await ChartService.GetTrendChartConfig(SelectedDateRange, TrendMetric);
+        await IncidentTrendChart.SetConfigAsync(trendConfig);
+        
+        // Category Distribution
+        var categoryConfig = await ChartService.GetCategoryChartConfig();
+        await CategoryChart.SetConfigAsync(categoryConfig);
+        
+        // Time of Day
+        var timeConfig = await ChartService.GetTimeOfDayChartConfig();
+        await TimeOfDayChart.SetConfigAsync(timeConfig);
+        
+        // Department Comparison
+        var deptConfig = await ChartService.GetDepartmentChartConfig();
+        await DepartmentChart.SetConfigAsync(deptConfig);
+        
+        // Response Time KPI
+        var responseConfig = await ChartService.GetResponseTimeChartConfig();
+        await ResponseTimeChart.SetConfigAsync(responseConfig);
+    }
+
+    private async Task UpdateChartsForDateRange()
+    {
+        var trendConfig = await ChartService.GetTrendChartConfig(SelectedDateRange, TrendMetric);
+        await IncidentTrendChart.SetConfigAsync(trendConfig);
+        
+        // Update other charts as needed
+        StateHasChanged();
+    }
+
+    private async Task ExportReport()
+    {
+        ShowReportDialog = true;
+        StateHasChanged();
+    }
+
+    private async Task GenerateReport()
+    {
+        // Generate report logic
+        Console.WriteLine($"Generating report: {ReportName}");
+        
+        // Close dialog
+        ShowReportDialog = false;
+        
+        // Show success message
+        // You can use MudBlazor's snackbar or your own notification system
+    }
+
+    private void CloseReportDialog()
+    {
+        ShowReportDialog = false;
+    }
+}

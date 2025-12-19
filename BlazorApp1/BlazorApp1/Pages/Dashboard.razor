@@ -1,0 +1,268 @@
+﻿@page "/dashboard"
+@using CampusSafety.Admin.Models
+@using CampusSafety.Admin.Services
+@using MudBlazor
+@inject IncidentService IncidentService
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Dashboard - Campus Safety Admin</PageTitle>
+
+<MudGrid Spacing="3" Justify="Justify.FlexStart">
+    <!-- Stats Cards -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center">
+                <MudAvatar Color="Color.Error" Size="Size.Large" Class="mr-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.h4">@TotalIncidents</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.TextSecondary">Total Incidents</MudText>
+                </div>
+            </div>
+            <MudText Typo="Typo.caption" Color="Color.Success" Class="mt-2">
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" />
+                12% this month
+            </MudText>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center">
+                <MudAvatar Color="Color.Warning" Size="Size.Large" Class="mr-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Pending" />
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.h4">@PendingIncidents</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.TextSecondary">Pending Review</MudText>
+                </div>
+            </div>
+            <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2">
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" />
+                3% from yesterday
+            </MudText>
+        </MudPaper>
+    </MudItem>
+
+    <!-- More stats cards... -->
+
+    <!-- Recent Incidents Table -->
+    <MudItem xs="12" Class="mt-4">
+        <MudPaper Elevation="2" Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h6">Recent Incidents</MudText>
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.List"
+                          OnClick="() => Navigation.NavigateTo("/incidents")">
+                    View All
+                </MudButton>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-4">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                </div>
+            }
+            else if (!recentIncidents.Any())
+            {
+                <div class="text-center py-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.TextSecondary" />
+                    <MudText Typo="Typo.body1" Color="Color.TextSecondary">No incidents found</MudText>
+                </div>
+            }
+            else
+            {
+                <MudTable Items="@recentIncidents" Hover="true" Breakpoint="Breakpoint.None">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Severity</MudTh>
+                        <MudTh>Reported</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Id.ToString()[..8]</MudTd>
+                        <MudTd>
+                            <MudText Typo="Typo.body2">@context.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.TextSecondary">@context.Location</MudText>
+                        </MudTd>
+                        <MudTd>
+                            <MudChip Variant="Variant.Outlined" Size="Size.Small">@context.Category</MudChip>
+                        </MudTd>
+                        <MudTd>
+                            <MudChip Variant="Variant.Filled"
+                                    Color="@GetStatusColor(context.Status)"
+                                    Size="Size.Small">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>
+                            <MudChip Variant="Variant.Filled"
+                                    Color="@GetSeverityColor(context.Severity)"
+                                    Size="Size.Small">
+                                @context.Severity
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>@context.CreatedAt.ToString("MMM dd, HH:mm")</MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                          Color="Color.Primary"
+                                          Size="Size.Small"
+                                          OnClick="@(() => ViewIncident(context.Id))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                          Color="Color.Info"
+                                          Size="Size.Small"
+                                          Class="ml-1"
+                                          OnClick="@(() => EditIncident(context.Id))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <!-- Charts Section -->
+    <MudItem xs="12" md="6" Class="mt-4">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Incident Categories</MudText>
+            <div class="chart-container">
+                <Canvas @ref="categoryChartRef" Width="400" Height="300"></Canvas>
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6" Class="mt-4">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Weekly Trend</MudText>
+            <div class="chart-container">
+                <Canvas @ref="trendChartRef" Width="400" Height="300"></Canvas>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- Quick Report Button -->
+<MudFab Color="Color.Primary" 
+        Variant="Variant.Filled" 
+        Class="fab-bottom-right"
+        OnClick="ShowQuickReportDialog">
+    <MudIcon Icon="@Icons.Material.Filled.Add" />
+</MudFab>
+
+@code {
+    // State variables
+    private int TotalIncidents = 0;
+    private int PendingIncidents = 0;
+    private List<Incident> recentIncidents = new();
+    private bool isLoading = true;
+    
+    // Chart references
+    private ElementReference categoryChartRef;
+    private ElementReference trendChartRef;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeCharts();
+        }
+    }
+    
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Load data from services
+            recentIncidents = await IncidentService.GetRecentIncidentsAsync(10);
+            var stats = await IncidentService.GetStatsAsync();
+            
+            TotalIncidents = stats.Total;
+            PendingIncidents = stats.Pending;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task InitializeCharts()
+    {
+        // Initialize Chart.js charts using JavaScript interop
+        // This would be in a separate service
+        await Task.CompletedTask;
+    }
+    
+    private Color GetStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "pending" => Color.Warning,
+            "investigating" => Color.Info,
+            "resolved" => Color.Success,
+            "closed" => Color.Default,
+            _ => Color.Default
+        };
+    }
+    
+    private Color GetSeverityColor(string severity)
+    {
+        return severity.ToLower() switch
+        {
+            "high" => Color.Error,
+            "medium" => Color.Warning,
+            "low" => Color.Success,
+            _ => Color.Default
+        };
+    }
+    
+    private void ViewIncident(Guid id)
+    {
+        Navigation.NavigateTo($"/incidents/{id}");
+    }
+    
+    private void EditIncident(Guid id)
+    {
+        Navigation.NavigateTo($"/incidents/edit/{id}");
+    }
+    
+    private async Task ShowQuickReportDialog()
+    {
+        var parameters = new DialogParameters();
+        
+        var options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+        
+        var dialog = DialogService.Show<QuickReportDialog>("Report New Incident", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Cancelled)
+        {
+            // Refresh data
+            await LoadDashboardData();
+            Snackbar.Add("Incident reported successfully!", Severity.Success);
+        }
+    }
+}

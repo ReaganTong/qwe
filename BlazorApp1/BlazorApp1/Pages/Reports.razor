@@ -1,50 +1,92 @@
 ﻿@page "/reports"
-@using AdminPanel.Models
-@inject Supabase.Client Supabase
+@using BlazorApp1.Models
+@inject Supabase.Client SupabaseClient
 @inject ISnackbar Snackbar
 
-<MudContainer Class="mt-8">
-    <MudText Typo="Typo.h4" Class="mb-4">Incident Reports</MudText>
+<header class="top-header">
+    <div class="header-left">
+        <h1>Incident Management</h1>
+        <p class="subtitle">Manage and track all campus safety incidents</p>
+    </div>
 
-    <MudTable Items="@reportList" Hover="true" Loading="@isLoading">
-        <HeaderContent>
-            <MudTh>Date</MudTh>
-            <MudTh>Description</MudTh>
-            <MudTh>Location</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Action</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.CreatedAt.ToString("g")</MudTd>
-            <MudTd>@context.Description</MudTd>
-            <MudTd>
-                <MudLink Href="@($"https://www.google.com/maps/search/?api=1&query={context.Location}")" Target="_blank">
-                    @context.Location
-                </MudLink>
-            </MudTd>
-            <MudTd>
-                <MudChip Color="@(context.Status == "Resolved" ? Color.Success : Color.Warning)">
-                    @context.Status
-                </MudChip>
-            </MudTd>
-            <MudTd>
-                @if (context.Status != "Resolved")
+    <div class="header-right">
+        <div class="header-actions">
+            <button class="btn btn-primary" id="newIncidentBtn">
+                <i class="fas fa-plus"></i> New Incident
+            </button>
+            <button class="btn btn-export" id="exportBtn">
+                <i class="fas fa-download"></i> Export
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="content-card">
+    <div class="table-toolbar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="incidentSearch" placeholder="Search incidents...">
+        </div>
+        <div class="table-actions">
+            <button class="btn-action" title="Refresh" @onclick="LoadData">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table" id="incidentsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Title / Description</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in reportList)
                 {
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Success" 
-                               Size="Size.Small"
-                               OnClick="@(() => MarkResolved(context))">
-                        Resolve
-                    </MudButton>
+                    <tr>
+                        <td class="text-mono">#@item.Id</td>
+                        <td>@item.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        <td>@item.Description</td>
+                        <td>@item.Location</td>
+                        <td>
+                            <span class="status-badge @GetStatusClass(item.Status)">
+                                @item.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                @if (item.Status != "Resolved")
+                                {
+                                    <button class="btn-action" title="Mark Resolved" @onclick="() => MarkResolved(item)">
+                                        <i class="fas fa-check" style="color:green;"></i>
+                                    </button>
+                                }
+                                <button class="btn-action" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
                 }
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
-</MudContainer>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-footer">
+        <div class="table-info">
+            Showing <span>@reportList.Count</span> incidents
+        </div>
+    </div>
+</div>
 
 @code {
     private List<ReportModel> reportList = new();
-    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,19 +95,32 @@
 
     private async Task LoadData()
     {
-        isLoading = true;
-        var response = await Supabase.From<ReportModel>()
-            .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
-            .Get();
-        reportList = response.Models;
-        isLoading = false;
+        try
+        {
+            var response = await SupabaseClient.From<ReportModel>()
+                .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Get();
+            reportList = response.Models;
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
     }
 
     private async Task MarkResolved(ReportModel report)
     {
         report.Status = "Resolved";
-        await Supabase.From<ReportModel>().Update(report);
-        Snackbar.Add("Report marked as resolved!", Severity.Success);
-        await LoadData(); // Refresh list
+        await SupabaseClient.From<ReportModel>().Update(report);
+        Snackbar.Add("Report Resolved", Severity.Success);
+        await LoadData();
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status.ToLower() switch
+        {
+            "resolved" => "status-resolved",
+            "pending" => "status-pending",
+            "investigating" => "status-investigating",
+            _ => "status-pending"
+        };
     }
 }

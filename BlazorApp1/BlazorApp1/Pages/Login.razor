@@ -1,0 +1,159 @@
+@page "/login"
+@using MudBlazor
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject AuthenticationService AuthService
+
+<PageTitle>Login - Campus Safety Admin</PageTitle>
+
+<div class="login-container">
+    <MudPaper Width="500px" Class="pa-8" Elevation="10">
+        <div class="text-center mb-6">
+            <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large" />
+            </MudAvatar>
+            <MudText Typo="Typo.h4" Class="mb-2">Admin Portal</MudText>
+            <MudText Typo="Typo.body2" Color="Color.TextSecondary">
+                Campus Safety Incident Reporting System
+            </MudText>
+        </div>
+
+        <MudForm @ref="loginForm" Model="@loginModel" @onsubmit="HandleLogin">
+            <MudTextField @bind-Value="loginModel.Email"
+                         Label="Email"
+                         Variant="Variant.Outlined"
+                         For="@(() => loginModel.Email)"
+                         FullWidth="true"
+                         Class="mb-4"
+                         Icon="@Icons.Material.Filled.Email" />
+
+            <MudTextField @bind-Value="loginModel.Password"
+                         Label="Password"
+                         Variant="Variant.Outlined"
+                         For="@(() => loginModel.Password)"
+                         InputType="InputType.Password"
+                         FullWidth="true"
+                         Class="mb-4"
+                         Icon="@Icons.Material.Filled.Lock"
+                         AdornmentIcon="@Icons.Material.Filled.VisibilityOff"
+                         AdornmentClick="TogglePasswordVisibility" />
+
+            <MudCheckBox @bind-Checked="loginModel.RememberMe" 
+                        Label="Remember me"
+                        Color="Color.Primary"
+                        Class="mb-4" />
+
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
+                      FullWidth="true"
+                      Size="Size.Large"
+                      Type="Button"
+                      OnClick="HandleLogin"
+                      Disabled="@isLoggingIn">
+                @(isLoggingIn ? "LOGGING IN..." : "LOGIN")
+            </MudButton>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">
+                    @errorMessage
+                </MudAlert>
+            }
+        </MudForm>
+
+        <MudDivider Class="my-4">
+            <MudText Typo="Typo.caption" Color="Color.TextSecondary">or</MudText>
+        </MudDivider>
+
+        <MudButton Variant="Variant.Outlined"
+                  Color="Color.Default"
+                  FullWidth="true"
+                  StartIcon="@Icons.Custom.Brands.Google"
+                  Disabled="true">
+            Sign in with Google
+        </MudButton>
+
+        <MudAlert Severity="Severity.Warning" Class="mt-4">
+            <MudText Typo="Typo.caption">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                This portal is for authorized personnel only.
+            </MudText>
+        </MudAlert>
+    </MudPaper>
+</div>
+
+@code {
+    private MudForm loginForm;
+    private LoginModel loginModel = new();
+    private bool isLoggingIn = false;
+    private string errorMessage = string.Empty;
+    private InputType passwordInput = InputType.Password;
+    private string passwordIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already logged in
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            Navigation.NavigateTo("/dashboard");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoggingIn = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await AuthService.LoginAsync(loginModel);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Login successful!", Severity.Success);
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        if (passwordInput == InputType.Password)
+        {
+            passwordInput = InputType.Text;
+            passwordIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            passwordInput = InputType.Password;
+            passwordIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = "admin@campus.edu";
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; } = true;
+    }
+}

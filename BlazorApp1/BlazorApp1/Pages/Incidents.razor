@@ -1,0 +1,135 @@
+﻿@page "/"
+@using BlazorApp1.Models
+@inject Supabase.Client SupabaseClient
+
+<PageTitle>Dashboard - Campus Safety</PageTitle>
+
+<header class="top-header">
+    <div class="header-left">
+        <h1>Dashboard Overview</h1>
+        <p class="subtitle">Welcome back! Here's what's happening today.</p>
+    </div>
+
+    <div class="header-right">
+        <div class="date-display">
+            <i class="far fa-calendar"></i>
+            <span id="currentDate">@DateTime.Now.ToString("MMMM dd, yyyy")</span>
+        </div>
+        <div class="header-actions">
+            <div class="dropdown notification-dropdown">
+                <button class="btn-notification" id="notificationBtn">
+                    <i class="far fa-bell"></i>
+                    <span class="notification-count">3</span>
+                </button>
+            </div>
+            <button class="btn-quick-add" id="quickReportBtn">
+                <i class="fas fa-plus"></i> New Report
+            </button>
+        </div>
+    </div>
+</header>
+
+<section class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-icon bg-danger">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>@Reports.Count</h3>
+            <p>Total Incidents</p>
+        </div>
+        <div class="stat-trend trend-up">
+            <i class="fas fa-arrow-up"></i>
+            <span>12% from last week</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon bg-warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <h3>@Reports.Count(r => r.Status == "Pending")</h3>
+            <p>Pending Review</p>
+        </div>
+        <div class="stat-trend trend-down">
+            <i class="fas fa-arrow-down"></i>
+            <span>5% from yesterday</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon bg-success">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>@Reports.Count(r => r.Status == "Resolved")</h3>
+            <p>Resolved Cases</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon bg-info">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+            <h3>456</h3>
+            <p>Registered Users</p>
+        </div>
+    </div>
+</section>
+
+<section class="content-grid">
+    <div class="content-card wide">
+        <div class="card-header">
+            <h3><i class="fas fa-list-ul"></i> Recent Incidents</h3>
+            <a href="reports" class="btn-view-all">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" id="recentIncidentsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var report in Reports.Take(5))
+                    {
+                        <tr>
+                            <td>@report.CreatedAt.ToString("MMM dd, HH:mm")</td>
+                            <td>@report.Description</td>
+                            <td>@report.Location</td>
+                            <td>
+                                <span class="badge status-@report.Status.ToLower()">
+                                    @report.Status
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@code {
+    private List<ReportModel> Reports = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await SupabaseClient.From<ReportModel>()
+                .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Get();
+            Reports = response.Models;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}

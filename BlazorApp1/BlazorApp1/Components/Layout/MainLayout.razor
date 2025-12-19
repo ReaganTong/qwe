@@ -1,0 +1,135 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+
+<MudLayout>
+    @if (IsAuthenticated)
+    {
+        <MudAppBar Elevation="0" Color="Color.Primary">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                         Color="Color.Inherit" 
+                         Edge="Edge.Start" 
+                         OnClick="@ToggleDrawer" />
+            <MudText Typo="Typo.h6" Class="ml-3">Campus Safety Admin</MudText>
+            <MudSpacer />
+            
+            <!-- Date Display -->
+            <MudText Typo="Typo.body2" Class="mr-3">@CurrentDate</MudText>
+            
+            <!-- Notifications -->
+            <MudMenu Direction="Direction.Bottom" OffsetY="true">
+                <ActivatorContent>
+                    <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
+                                 Color="Color.Inherit" />
+                    @if (UnreadNotifications > 0)
+                    {
+                        <MudBadge Color="Color.Error" 
+                                Class="notification-badge">@UnreadNotifications</MudBadge>
+                    }
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" 
+                               OnClick="GoToSettings">Settings</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" 
+                               OnClick="Logout">Logout</MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        </MudAppBar>
+
+        <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always">
+            <!-- Sidebar Content -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Medium" Color="Color.Primary" />
+                        <h2>Campus<span>Safety</span></h2>
+                    </div>
+                </div>
+                
+                <div class="sidebar-user">
+                    <MudAvatar Image="@CurrentUser?.AvatarUrl" 
+                             Color="Color.Primary"
+                             Size="Size.Large">@GetInitials()</MudAvatar>
+                    <div class="user-info">
+                        <h4>@CurrentUser?.Name</h4>
+                        <p>@CurrentUser?.Role</p>
+                    </div>
+                </div>
+                
+                <MudNavMenu>
+                    <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
+                        Dashboard
+                    </MudNavLink>
+                    <MudNavLink Href="/incidents" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Warning">
+                        Incidents
+                        @if (PendingIncidents > 0)
+                        {
+                            <MudBadge Color="Color.Error" Size="Size.Small">@PendingIncidents</MudBadge>
+                        }
+                    </MudNavLink>
+                    <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">
+                        Users
+                    </MudNavLink>
+                    <MudNavLink Href="/map" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Map">
+                        Map View
+                    </MudNavLink>
+                    <MudNavLink Href="/analytics" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Analytics">
+                        Analytics
+                    </MudNavLink>
+                    <MudNavLink Href="/settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">
+                        Settings
+                    </MudNavLink>
+                </MudNavMenu>
+            </div>
+        </MudDrawer>
+    }
+
+    <MudMainContent>
+        @if (IsAuthenticated)
+        {
+            <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+                @Body
+            </MudContainer>
+        }
+        else
+        {
+            @Body
+        }
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool IsAuthenticated = true; // Replace with actual auth check
+    private int PendingIncidents = 5;
+    private int UnreadNotifications = 3;
+    private User CurrentUser = new() { Name = "Admin User", Role = "Administrator" };
+    private string CurrentDate = DateTime.Now.ToString("dddd, MMMM dd, yyyy");
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void GoToSettings()
+    {
+        Navigation.NavigateTo("/settings");
+    }
+
+    private async Task Logout()
+    {
+        // Implement logout logic
+        IsAuthenticated = false;
+        Navigation.NavigateTo("/login");
+    }
+
+    private string GetInitials()
+    {
+        if (string.IsNullOrEmpty(CurrentUser?.Name)) return "AU";
+        var names = CurrentUser.Name.Split(' ');
+        return names.Length >= 2 
+            ? $"{names[0][0]}{names[1][0]}"
+            : CurrentUser.Name.Substring(0, Math.Min(2, CurrentUser.Name.Length)).ToUpper();
+    }
+}
